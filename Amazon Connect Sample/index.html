@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html >
+<head>
+  <meta charset="UTF-8">
+  <title>Poly Amazon Connect CCP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script src="js/spokes.js"></script> <!-- Poly API interface -->
+  <script src="js/util.js"></script>
+  <script src="js/amazon-connect-v1.2.0.js"></script>
+  <script src="js/scripts.js"></script>
+</head>
+<body onload="connectToPlantronics()" onbeforeunload="disconnectFromPlantronics()">
+<div id="container">
+		<div id="bg">
+		</div>
+		<div class="panel">
+			<div class="iframe" id="containerDiv"></div>
+			<div>
+				<!--<img src="images/iframe.jpg">-->
+					<div class="plt">
+						<div class="ccp-footer">
+		          <img onclick="window.open('http://poly.com/','_blank')" class="poly-spin" src="images/poly_propeller_orange.svg">
+		          <img onclick="window.open('http://poly.com/','_blank')" class="poly-label" src="images/poly.svg">
+						</div>
+						<div id="headset-name" class="headset-name">
+							<p></p>
+						</div>
+						<div id="headset-name-zero" class="headset-name-zero">
+							<p>Device Not Detected</p>
+						</div>
+					</div>
+			</div>
+			<div class="coachmark-arrows">
+				<span class="coachtip-ccp"><img src="images/coachtips_ccp.png"></span>
+			</div>
+		</div>
+
+		<div class="coachmark-arrows">
+			<div class="coachtip-footer"><img src="images/coachtips_footer.png"></div>
+		</div>
+
+		<div id="debug-table">
+			<h3>Debug Log | <a id="clear_log" href="#" onclick="">clear</a></h3>
+			<table width="98%">
+			  <thead>
+			    <tr>
+			      <th width="30%">Amazon</th>
+			      <th width="70%">Poly</th>
+			    </tr>
+			  </thead>
+			  <tbody>
+                    <tr>
+                        <td valign="top" colspan="1">
+                            <div id="amazonlog"></div>
+                        </td>
+                        <td valign="top">
+                            <div id="logdiv"></div>
+                        </td>
+                    </tr>
+			  </tbody>			  
+			</table>
+		</div>
+
+		<div class="footer">
+			<!-- <div class="poly-logo">
+				<img src="images/poly_logo_black_orange.svg">
+			</div> -->
+			<div>
+          <img onclick="window.open('http://poly.com/','_blank')" class="poly-spin" src="images/poly_propeller_orange.svg">
+          <img onclick="window.open('http://poly.com/','_blank')" class="poly-label" src="images/poly.svg">
+      </div>
+			<div id="headset-name2" class="headset-name">
+				<p></p>
+			</div>
+			<div id="headset-name-zero2" class="headset-name-zero">
+				<p>No Device Detected</p>
+			</div>
+			<div class="coachmarks-icon">
+				<a id="coachmark" href="#"><img src="images/coachmarks.svg"></a>
+			</div>
+			<div class="spawn-icon">
+				<a onclick="window.open('/','Poly Amazon Connect CCP','height=520,width=320,top=100,left=1000,scrollbars=no'); return false;"><img src="images/spawn.svg"></a>
+			</div>
+			<div class="info-icon">
+				<a id="info" href="#"><img src="images/info.svg"></a>
+			</div>
+			<div class="debug">
+				<label class="onoffbtn"><input id="log" type="checkbox"></label>
+			</div>
+		</div>
+
+		<div id="info-dialog" >
+			<div class="dialog-header">
+				<h4>About Poly Amazon Connect CCP v1.0.0 <span class="close-link"><a id="close" href="#">X</a></span></h4>
+			</div>
+			<div class="dialog-content">
+				<p>Poly Amazon Connect CCP (Contact Control Panel) enables remote call control for all Poly headsets that are compatible with <a href="https://aws.amazon.com/connect/" target="_blank">Amazon Connect</a> and <a href="https://www.plantronics.com/us/en/support/downloads-apps/hub-desktop" target="_blank">Poly Hub</a>.</p>
+				<p>Prerequisites:</p>
+				<ol>
+					<li><a href="https://www.plantronics.com/us/en/support/downloads-apps/hub-desktop" target="_blank">Install Poly Hub</a> - Hub provides advanced features required for Amazon Connect deployments with Poly endpoints.</li>
+					<li>Add the URL of this page as a known origin in the Amazon Connect settings (For more info see the “Getting Started, Whitelisting” section of the <a href="https://github.com/aws/amazon-connect-streams/blob/master/Documentation.md" target="_blank">Amazon Connect Streams Documentation</a>)</li>
+				</ol>
+				<p>Help Getting Started:</p>
+				<ol>
+					<li>Firefox Users may see “Error connecting to Plantronics Hub” in the debug log. To resolve visit <a href="https://127.0.0.1:32018/Spokes/DeviceServices/Info" target="_blank">this URL</a> from Firefox, then click Advanced > Add Exception.</li>
+					<li>If the Amazon Connect CCP login opens in a second Tab, sign in from that Tab, then close the Tab, then refresh the main window.</li>
+				</ol>
+			</div>
+		</div>
+</div>
+
+<!-- <div id="container_mobile">
+		<div class="computer">
+			<img src="images/computer.svg">
+		</div>
+		<div class="message">
+			<h4>Minimum resolution of 1024x768 required.<br/>
+				Please expand your browser window.
+			</h4>
+		</div>
+</div> -->
+
+    <script>
+            var activeCall = undefined;
+            var agentStateCollection = {}
+            var inbound = false;
+            var spokes; // global Spokes object, initialised when this page is loaded (onload)
+            var plugin_registered = false;
+            var plugin_name = "Poly Amazon Connect";
+            var callid = 99;
+            var deviceAttached = true;
+            var pollRate = 2000;
+            var previousPollRate = 2000;
+            // start polling the API for device events or to reconnect to API (in the event of connection failure)...
+            var run = setInterval(pollDeviceEventsOrReconnect, pollRate);
+            var onCall = false;
+            var callMute = 0; // 0 = mute not possible, 1 = not muted, 2 = muted
+			var myagent = null;
+			var hubCallActive = false;
+			var callHeld = 0; // 0 = hold not possible, 1 = not held, 2 = held
+
+            connect.core.initCCP(containerDiv, {
+                ccpUrl: "https://myamazonconnect.awsapps.com/connect/ccp#",
+                loginPopup: true,
+                softphone: { allowFramedSoftphone: true, loginPopupAutoClose: true }
+            });
+            connect.agent(function (agent) {
+				myagent = agent;
+                appendAmazonLog("contact.agent, Agent name = " + agent.getName() + ", state = " + agent.getState().type);
+                agent.onRefresh(function (agent) {
+                    appendAmazonLog("agent.onRefresh, state = " + agent.getState().type);
+                });
+                agent.onRoutable(function (agent) {
+                    appendAmazonLog("agent.onRoutable, state = " + agent.getState().type);
+                });
+                agent.onNotRoutable(function (agent) {
+                    appendAmazonLog("agent.onNotRoutable, state = " + agent.getState().type);
+                });
+                agent.onOffline(function (agent) {
+                    appendAmazonLog("agent.onOffline, state = " + agent.getState().type);
+                });
+                agent.onError(function (agent) {
+                    appendAmazonLog("agent.onError, state = " + agent.getState().type);
+                });
+                agent.onAfterCallWork(function (agent) {
+                    appendAmazonLog("agent.onAfterCallWork, state = " + agent.getState().type);
+                });
+                agent.getAgentStates().filter(function (state) {
+                    if (state.name === "Available") {
+                        agentStateCollection.Available = state;
+                    }
+                    else if (state.name === "Offline") {
+                        agentStateCollection.Offline = state;
+                    }
+                });
+				agent.onMuteToggle(function(m) {
+					console.log("Amazon CCP mute state = " + m.muted);
+					if (m.muted) {
+						callMute = 2; // we are now muted
+						muteCommand();
+					} else {
+						callMute = 1; // we are now not muted
+						muteCommand();
+					}
+				});				
+            });
+            connect.contact(function (contact) {
+                activeCall = contact;
+                appendAmazonLog("connect.contact");
+                contact.onRefresh(function (contact) {
+                    appendAmazonLog("contact.onRefresh, inbound = " + contact.isInbound());
+					// is call on hold?
+					appendAmazonLog("Is call on hold....?");
+					if (contact != null)
+					{
+						var connection = contact.getInitialConnection();
+						var onhold = connection.isOnHold();
+						appendAmazonLog("CALL HOLD STATE = " + onhold);
+						if (onhold)
+						{
+							if (callHeld == 1)
+							{
+								callHeld = 2;
+								holdCommand();
+							}
+							else
+							{
+								appendLog("INFO: ignoring call held state. call held = " + callHeld);
+							}
+						}
+						else
+						{	
+							if (callHeld == 2)
+							{
+								callHeld = 1;
+								resumeCommand();
+							}
+							else
+							{
+								appendLog("INFO: ignoring call held state. call held = " + callHeld);
+							}							
+						}
+					}
+					else
+					{
+						appendAmazonLog("INFO: contact is null");
+					}
+                });
+                contact.onIncoming(function (contact) {
+                    appendAmazonLog("contact.onIncoming, inbound = " + contact.isInbound());
+                });
+                contact.onAccepted(function (contact) {
+                    appendAmazonLog("contact.onAccepted, inbound = " + contact.isInbound());
+                });
+                contact.onEnded(function (contact) {
+                    appendAmazonLog("contact.onEnded, inbound = " + contact.isInbound());
+                    activeCall = null;
+                    inbound = false;
+                    plantronicsOff();
+                });
+                contact.onConnected(function (contact) {
+                    appendAmazonLog("contact.onConnected, inbound = " + contact.isInbound());
+                    inbound = contact.isInbound();
+                    if (inbound) {
+                        plantronicsOn(); // incoming call was answered in GUI
+                    }
+                    else {
+                        // no action, outgoing call audio already on at onConnecting
+                    }
+                });
+                contact.onConnecting(function (contact) {
+                    appendAmazonLog("contact.onConnecting, inbound = " + contact.isInbound());
+                    inbound = contact.isInbound();
+                    if (inbound) {
+                        plantronicsRing(); // incoming call
+                    }
+                    else {
+                        plantronicsOn(); // outgoing call
+                    }
+                });
+            });
+
+            // New 27th Oct 2017 handle QD events to set agent availability
+            function changeAgentState(nextState) {
+                connect.agent(function (agent) {
+                    agent.setState(nextState, {
+                        success: function () {
+                            appendAmazonLog("changeAgentState success, nextState = " + nextState.name);
+                        },
+                        failure: function () {
+                            appendAmazonLog("changeAgentState fail, was trying to set nextState = " + nextState.name)
+                        }
+                    });
+                });
+            }
+
+            function plantronicsRing() {
+                // set as incomingcall (done in onConnecting for inbound)
+                appendLog("Initiating make call command, call id = " + callid.toString(), 1);
+
+                spokes.Plugin.incomingCall(plugin_name, getCallId(callid), getContact("Dummy Contact"), "Unknown", "ToHeadset", function (result) {
+                    showCallStatus(result);
+                });
+            }
+
+            function plantronicsOn() {
+                if (inbound) {
+                    // set as answered (done in onConnected for inbound)
+                    appendLog("Answering call command, call id = " + callid.toString(), 1);
+
+                    spokes.Plugin.answerCall(plugin_name, getCallId(callid), function (result) {
+                        showCallStatus(result);
+                    });
+                }
+                else {
+                    // set as outgoingcall (done in onConnecting for outBound)
+                    appendLog("Initiating make call command, call id = " + callid.toString(), 1);
+
+                    spokes.Plugin.outgoingCall(plugin_name, getCallId(callid), getContact("Dummy Contact"), "ToHeadset", function (result) {
+                        showCallStatus(result);
+                    });
+                }
+            }
+
+            function plantronicsOff() {
+                appendLog("Ending call, call id = " + callid.toString(), 1);
+                spokes.Plugin.terminateCall(plugin_name, getCallId(callid), function (result) {
+                    showCallStatus(result);
+                });
+            }
+
+            function muteCommand() {
+                // make this mute using REST API - note this updates image but action callMute state is updated when
+                // we receive event ack back from Hub that call mute was changed!
+                if (callMute == 0) {
+                    appendLog("ignoring mute as not on call", 1);
+                }
+                else if (callMute == 2) { // we are muted, so send mute true to Hub
+                    //document.getElementById("muteimg").src = "images/mic_on.png";
+                    appendLog("issuing mute = true", 1);
+                    spokes.Plugin.muteCall(plugin_name, true);
+                }
+                else if (callMute == 1)
+                { // we are not muted, so send mute false to Hub
+                    //document.getElementById("muteimg").src = "images/mic_off.png";
+                    appendLog("issuing mute = false", 1);
+                    spokes.Plugin.muteCall(plugin_name, false);
+                }               
+            }
+			
+			function holdCommand() {
+				spokes.Plugin.holdCall(plugin_name, getCallId(callid));
+			}
+
+			function resumeCommand() {
+				spokes.Plugin.resumeCall(plugin_name, getCallId(callid));
+			}
+			
+            /*function toggleDebugMode() {
+                if (document.getElementById("debugcheck").checked) {
+                    log.innerHTML = "";
+                    amazonlog.innerHTML = "";
+                    document.getElementById("debugdisplay").style.display = "inline";
+                }
+                else {
+                    document.getElementById("debugdisplay").style.display = "none";
+                }
+            }*/
+
+            $('#clear_log').click(function () {
+                logdiv.innerHTML = "";
+                amazonlog.innerHTML = "";
+            });
+
+            // Convenience functions to create call and contact structures used for IncomingCall/OutgoingCall functions
+            function getCallId(callid) {
+                return new SpokesCallId({ Id: '' + callid });
+            }
+
+            function getContact(contactname) {
+                return new SpokesContact({ Name: contactname });
+            }
+
+            function getTime() {
+                var d = new Date();
+                var n = d.toLocaleTimeString();
+                return n;
+            }
+
+            // displays status of call commands
+            function showCallStatus(result, toJson) {
+                if (result.isError) {
+                    appendLog("Error: " + result.Err.Description);
+                } else {
+                    if (toJson) appendLog(JSON.stringify(result.Result))
+                    else appendLog("Success.");
+                }
+            };
+
+            function appendLog(str, highlightcolor = 2) {
+                if (highlightcolor == 1) {
+                    str = "<span class=\"highlight1\">" + str + "</span>";
+                }
+                else if (highlightcolor == 2) {
+                    str = "<span class=\"highlight2\">" + str + "</span>";
+                }
+                logdiv.innerHTML = logdiv.innerHTML + "<br /><span class=\"timestamp\">" + getTime() + "</span> " + str;
+            }
+
+            function appendAmazonLog(str, highlightcolor = 0) {
+                if (highlightcolor == 1)
+                {
+                    str = "<span class=\"highlight1\">" + str + "</span>";
+                }
+                else if (highlightcolor == 2) {
+                    str = "<span class=\"highlight2\">" + str + "</span>";
+                }
+                amazonlog.innerHTML = amazonlog.innerHTML + "<br /><span class=\"timestamp\">" + getTime() + "</span> " + str;
+            }
+
+            function connectToPlantronics() {
+                // Connect to the Plantronics REST API
+                spokes = new Spokes("https://127.0.0.1:32018/Spokes");
+
+                // get info about attached device (if any)
+                spokes.Device.deviceInfo(function (result) {
+                    if (!result.isError) {
+                        if (result.Result /*[0]*/ != null) {
+                            // Log Spokes active device found (first in list returned, index 0)
+                            appendLog("Device found = " + result.Result /*[0]*/.ProductName + ", id = " + result.Result /*[0]*/.Uid);
+
+                            deviceAttached = true;
+							
+							// update the web page with device name
+							prodName = result.Result.ProductName;
+							// if too long, see if starts with Plantronics, if so remove Plantronics word
+							if (prodName.length>22)
+							{
+								n = prodName.indexOf("Plantronics");
+								if (n == 0)
+								{
+									prodName = prodName.substring(12);
+								}
+							}
+							// if still too long, abbreviate
+							if (prodName.length>23)
+							{
+								prodName = prodName.substring(0,23) + "...";
+							}
+							document.getElementById('headset-name').innerHTML = "<p>"+prodName+"</p>";
+							document.getElementById('headset-name2').innerHTML = "<p>"+prodName+"</p>";
+							document.getElementById('headset-name').style.display= 'inline-block';
+							document.getElementById('headset-name-zero').style.display= 'none';
+							document.getElementById('headset-name2').style.display= 'inline-block';
+							document.getElementById('headset-name-zero2').style.display= 'none';
+							
+							// propeller spin
+							e1 = $('.poly-spin');
+							e1.addClass('propellerSpin');
+							e1.one('webkitAnimationEnd oanimationend msAnimationEnd animationend',
+							function (e) {
+								e1.removeClass('propellerSpin');
+							});							
+
+                            // attach to the device, provide a callback function for the result
+                            spokes.Device.attach(result.Result /*[0]*/.Uid, deviceAttachedCallback);
+                        } else {
+                            appendLog("Error: Device was null on connecting to Spokes. Is there a Poly device connected?");
+                            deviceAttached = false;
+							
+							// update the web page with device name
+							document.getElementById('headset-name').style.display= 'none';
+							document.getElementById('headset-name-zero').style.display= 'inline-block';
+							document.getElementById('headset-name2').style.display= 'none';
+							document.getElementById('headset-name-zero2').style.display= 'inline-block';
+                        }
+                        pollRate = 2000; // waiting for device events now, force faster polling rate to start now (if applicable)
+                        if (previousPollRate == 10000) {
+                            var previousPollRate = 2000;
+                            // start polling the device and call state events...
+                            var run = setInterval(pollDeviceEventsOrReconnect, pollRate);
+                        }
+                    } else {
+                        if (result.Err.Description === "There are no supported devices") {
+                            appendLog("Please attach a Poly headset to the PC.");
+                        }
+                        else {
+                            appendLog("Error connecting to Plantronics Hub. (Have you installed and run Plantronics Hub from <a href=\"http://www.plantronics.com/software\" target=\"_new\">www.plantronics.com/software</a>, or " +
+                                "are you Firefox user and getting \"Error connecting to Plantronics Hub.\"? If so visit this URL: <a href=\"https://127.0.0.1:32018/Spokes/DeviceServices/Info\" target=\"_new\">" +
+                                "https://127.0.0.1:32018/Spokes/DeviceServices/Info</a> and click Advanced > Add Exception... to add a security exception to allow the connection.");
+                            pollRate = 10000; // slow down polling rate while we are waiting for Hub to be running
+                        }
+                    }
+                });
+            }
+
+            //Callback to receive result of device attach. If successful register a plugin (Plantronics API application session)
+            function deviceAttachedCallback(session) {
+                if (session.isError || !spokes.Device.isAttached) {
+                    appendLog("Session Registration Error");
+                    deviceAttached = false;
+                    disconnectFromPlantronics();
+                } else {
+                    appendLog("Session ID: " + session.Result);
+
+                    registerPlugin(); // register a plugin (Plantronics API application session)
+                }
+            }
+
+            function setPluginActive() {
+                //Set plugin active status to true
+                spokes.Plugin.isActive(plugin_name, true, function (result) {
+                    if (!result.isError) {
+                        // plugin registered and active. Show UI.
+                        plugin_registered = true;
+                        appendLog("Plugin \"" + plugin_name + "\" registered successfully.");
+                    } else {
+                        appendLog("Error checking if plugin is active: " + result.Err.Description);
+                    }
+                });
+            }
+
+            // Register a Spokes Plugin (Plantronics API application session) to get access to Call Services, Device and Call events
+            function registerPlugin() {
+                if (!plugin_registered) {
+                    spokes.Plugin.register(plugin_name, function (result) {
+                        if (!result.isError) {
+                            setPluginActive();
+                        } else {
+                            appendLog("Info: registering plugin: " + result.Err.Description);
+                            if (result.Err.Description === "Plugin exists") {
+                                setPluginActive();
+                            }
+                            else {
+                                deviceAttached = false;
+                                disconnectFromPlantronics();
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Unregister Spokes plugin (Plantronics API application session)
+            function unregisterPlugin() {
+                spokes.Plugin.unRegister(plugin_name);
+                plugin_registered = false;
+                appendLog("Plugin un-registered.");
+            }
+
+            // Cleanup the Plantronics REST API
+            function disconnectFromPlantronics() {
+                unregisterPlugin();
+                spokes.Device.release(function (result) {
+                    if (!result.isError) {
+                        appendLog("Released device");
+                    } else {
+                        appendLog("Error releasing device");
+                    }
+                    appendLog("Disconnected from Spokes");
+                });
+            }
+
+            // Function to perform device and call event polling if we are connected to Hub, or else attempt to reconnect to Hub
+            function pollDeviceEventsOrReconnect() {
+                // supports variable poll rate, 2000ms waiting for a device, 10000ms waiting for Hub to be running
+                if (previousPollRate != pollRate) {
+                    clearInterval(run);
+                    previousPollRate = pollRate;
+                    run = setInterval(pollDeviceEventsOrReconnect, pollRate);
+                }
+                if (spokes == null || !deviceAttached || !spokes.Device.isAttached) {
+                    appendLog("-- POLLING FOR HUB / DEVICE RE-ATTACH --");
+                    connectToPlantronics();
+                    return;
+                }
+
+                // Poll for device events
+                // informs us of a variety of Plantronics device state changes
+                spokes.Device.events(
+                    function (result) {
+                        if (result.isError) {
+                            appendLog("Error polling for device events: " + result.Err.Description);
+                            if (result.Err.Description === "No response.  Server appears to be offline.") {
+                                pollRate = 10000;
+                                appendLog("changing POLL RATE to " + pollRate);
+                            }
+                            if (result.Err.Description === "Invalid session id" ||
+                                result.Err.Description === "Empty session id" ||
+                                result.Err.Description === "No response.  Server appears to be offline.") {
+                                appendLog("-- ** DEVICE DETACHED / SESSION INVALID ** --");
+                                deviceAttached = false;
+								
+								// update the web page with device name							
+								document.getElementById('headset-name').style.display= 'none';
+								document.getElementById('headset-name-zero').style.display= 'inline-block';
+								document.getElementById('headset-name2').style.display= 'none';
+								document.getElementById('headset-name-zero2').style.display= 'inline-block';
+								
+                                disconnectFromPlantronics();								
+                            }
+                        } else {
+                            // display list of events collected from REST service
+                            if (result.Result.length > 0) {
+                                for (var i = 0; i < result.Result.length; i++) {
+                                    appendLog("Device Event: " + result.Result[i].Event_Log_Type_Name + ", " + print_r(result.Result[i]), 0);
+
+                                    // New 27th Oct 2017 handle QD events to set agent availability
+                                    if (result.Result[i].Event_Id == 32) {
+                                        changeAgentState(agentStateCollection.Offline);
+                                        appendLog("QD was disconnected");
+                                        document.getElementById("qdimg").src = "images/headset_off.png";
+                                    }
+                                    else if (result.Result[i].Event_Id == 31) {
+                                        appendLog("QD was connected");
+                                        changeAgentState(agentStateCollection.Available);
+                                        document.getElementById("qdimg").src = "images/headset_on.png";
+                                    }
+                                    else if (result.Result[i].Event_Id == 5 && result.Result[i].Event_Log_Type_Name == "HeadsetStateChange") {
+										appendLog("Processing device mute on state event");
+                                        if (onCall) {
+											if (callMute != 2)
+											{ // Hub changed mute to On, so notify Amazon
+												callMute = 2;
+												appendLog("MuteON");
+												//document.getElementById("muteimg").src = "images/mic_off.png";
+												appendLog("Sending mute on to Amazon CCP.");
+												myagent.mute();
+											}
+											else
+											{
+												appendAmazonLog("INFO: ignoring mute from Hub, because our callMute is set to: " + callMute);
+											}
+                                        }
+                                        else
+                                        {
+                                            callMute = 0;
+                                            appendLog("Mute n/a");
+                                            //document.getElementById("muteimg").src = "images/mic_na.png";
+                                        }
+                                    }
+                                    else if (result.Result[i].Event_Id == 6 && result.Result[i].Event_Log_Type_Name == "HeadsetStateChange") {
+										appendLog("Processing device mute off state event");
+                                        if (onCall) {
+											if (callMute != 1)
+											{ // Hub changed mute to Off, so notify Amazon
+												callMute = 1;
+												appendLog("MuteOFF");
+												//document.getElementById("muteimg").src = "images/mic_on.png";
+												appendLog("Sending mute off to Amazon CCP.");
+												myagent.unmute();
+											}
+											else
+											{
+												appendAmazonLog("INFO: ignoring mute from Hub, because our callMute is set to: " + callMute);
+											}
+                                        }
+                                        else
+                                        {
+                                            callMute = 0;
+                                            appendLog("Mute n/a");
+                                            //document.getElementById("muteimg").src = "images/mic_na.png";
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                // Poll for call state events (call control events)
+                // informs us the calling state has changed, for example user as answered/terminated a call
+                // using headset buttons - this event should be used in my app to actually connect/terminate the call!
+                spokes.Plugin.callEvents(plugin_name,
+                    function (result) {
+                        if (result.isError) {
+                            appendLog("Error polling for call events: " + result.Err.Description);
+                            if (result.Err.Description === "No response.  Server appears to be offline.") {
+                                pollRate = 10000;
+                                appendLog("changing POLL RATE to " + pollRate);
+                            }
+                            if (result.Err.Description === "Invalid session id" ||
+                                result.Err.Description === "Empty session id" ||
+                                result.Err.Description === "No response.  Server appears to be offline.") {
+                                appendLog("-- ** DEVICE DETACHED / SESSION INVALID ** --");
+                                deviceAttached = false;
+                                disconnectFromPlantronics();
+                            }
+                        } else {
+                            // display list of events collected from REST service
+                            if (result.Result.length > 0) {
+                                for (var i = 0; i < result.Result.length; i++) {
+                                    appendLog("Call Event: " + result.Result[i].Event_Log_Type_Name + ", " + print_r(result.Result[i]));
+                                    // Workout the actual call state and call id in question
+                                    var callState = SessionCallState.Lookup[result.Result[i]["Action"]];
+                                    var callId = result.Result[i]["CallId"]["Id"];
+                                    appendLog("CallState: " + callState + ", Call ID: " + callId);
+
+                                    if (callId == callid) {
+                                        if (callState === "AcceptCall") {
+                                            if (activeCall != null) {
+                                                activeCall.accept({
+                                                    success: function () {
+                                                        appendLog("Successfully answered Amazon Call");
+                                                    },
+                                                    failure: function () {
+                                                        appendLog("Failed to answer Amazon Call");
+                                                    }
+                                                });
+                                            }
+                                        }
+                                        else if (callState === "TerminateCall") {
+                                            if (activeCall != null) {
+                                                appendLog("Attempt to terminate Amazon Call...");
+                                                activeCall.getInitialConnection().destroy();
+                                            }
+                                        }
+                                        else if (callState === "CallInProgress") {
+                                            if (activeCall != null) {
+												if (!onCall)
+												{
+													// assume start of call unmute headset
+													onCall = true;
+													callMute = 1; // not held
+													callHeld = 1; // not held
+													appendLog("MuteOFF");
+													//document.getElementById("muteimg").src = "images/mic_on.png";
+												}
+												callHeld = 1; // not held
+                                            }
+                                        }
+                                        else if (callState === "CallEnded") {
+                                            onCall = false;
+                                            callMute = 0;
+											callHeld = 0; // cannot be held, no call
+                                            appendLog("Mute n/a");
+                                            //document.getElementById("muteimg").src = "images/mic_na.png";
+                                         }
+										 else if (callState === "HoldCall") {
+											appendLog("Sending hold call to Amazon CCP.");
+											if (activeCall!=null && callHeld == 1)
+											{
+												var connection = activeCall.getInitialConnection();
+												var onhold = connection.isOnHold();			
+												if (!onhold)
+												{
+													connection.hold();
+												}
+											}
+											else
+											{
+												appendLog("INFO: ignoring hold call, callHeld = " + callHeld);
+											}
+										 }
+										 else if (callState === "Resumecall") {
+											appendLog("Sending resume call to Amazon CCP.");
+											if (activeCall!=null && callHeld == 2)
+											{
+												var connection = activeCall.getInitialConnection();
+												var onhold = connection.isOnHold();			
+												if (onhold)
+												{
+													connection.resume();
+												}
+											}
+											else
+											{
+												appendLog("INFO: ignoring hold resume, callHeld = " + callHeld);
+											}
+										 }
+										 else if (callState === "RejectCall") {
+											// reject call via headset button long press, etc.
+                                            if (activeCall != null) {
+                                                appendLog("Attempt to terminate Amazon Call...");
+                                                activeCall.getInitialConnection().destroy();
+                                            }											
+										 }
+                                    }
+                                }
+                            }
+                        }
+                    });
+            }
+    </script>
+
+</body>
+</html>

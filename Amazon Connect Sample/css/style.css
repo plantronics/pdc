@@ -1,0 +1,400 @@
+@charset "UTF-8";
+@import url(https://fonts.googleapis.com/css?family=Lato:700,300,600,800,400);
+
+body, html {
+  height: 100%;
+  margin: 0;
+  overflow-x: hidden;
+}
+#container {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+#bg {
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #000;
+  background-image: url("../images/callCenter.jpg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: cover;
+  opacity: 0.4;
+  z-index: -10;
+}
+.panel {
+	position: relative;
+  top: 15%;
+	left: 25%;
+	color: #999;
+	width: 320px;
+  box-shadow: 10px 10px 30px #333;
+}
+.plt {
+  display: none;
+}
+.iframe {
+    height: 465px;
+    width: 320px;
+}
+iframe {
+    border-width: 0;
+}
+/* - - headset img - - */
+/* .headset {
+   display: inline-block;
+   position: absolute;
+   right: 40px;
+   top: 20px;
+}
+.headset img {
+	max-width: 50px;
+}
+.headset img:last-child {
+	display:none
+	}
+.headset:hover img:first-child{display:none}
+.headset:hover img:last-child{display:inline-block} */
+
+.headset-name {
+  display: none;
+  font-size: 14px;
+  position: fixed;
+  right: 375px;
+  bottom: 2px;
+  color: 000;
+}
+.headset-name-zero {
+  font-size: 14px;
+  display: inline-block;
+  position: fixed;
+  right: 375px;
+  bottom: 2px;
+  color: #999;
+}
+
+/* - - mic button w/ toggle - -  */
+.mic {
+   display: inline-block;
+   position: absolute;
+   z-index: 5;
+   overflow: visible;
+   right: 15px;
+   bottom: -50px;
+}
+.mic img:last-child {
+	display:none
+	}
+.mic:hover img:first-child{display:none}
+.mic:hover img:last-child{display:inline-block}
+
+
+/* - - footer bar - - */
+.footer {
+	background: #F2F2F2;
+	position:fixed;
+	left:0px;
+	bottom:0px;
+	height:50px;
+	width:100%;
+}
+img.poly-spin  {
+  margin: 4px 0 0 20px;
+  display: inline-block;
+  cursor: pointer
+}
+img.poly-label  {
+  padding: 0 0 6px 4px;
+  display: inline-block;
+  cursor: pointer
+}
+.amzn {
+	display: inline-block;
+	width: 240px;
+	margin: 0;
+}
+/* - - footer icons - - */
+.coachmarks-icon img {
+	position: absolute;
+	right: 240px;
+	bottom:13px;
+	width: 24px;
+}
+.coachmarks-icon img:hover {
+	width: 26px;
+}
+.coachmark-arrows {
+  display: none;
+}
+.coachtip-footer {
+  position: absolute;
+  right: 85px;
+  bottom: 55px;
+}
+.coachtip-ccp {
+  position: absolute;
+  left: 85%;
+  bottom: 270px;
+}
+.spawn-icon img {
+	position: absolute;
+	right: 180px;
+	bottom:14px;
+	width: 24px;
+}
+.spawn-icon img:hover {
+	width: 26px;
+}
+.info-icon img {
+	position: absolute;
+	right: 300px;
+	bottom:14px;
+	width: 24px;
+}
+.info-icon img:hover {
+	width: 26px;
+}
+#info-dialog {
+	display: none;
+	width: 440px;
+	height: 300px;
+	position: absolute;
+	right: 150px;
+	bottom: 225px;
+	margin: 0 0 0 -300px;
+	background-color: #eee;
+    box-shadow: 0 6px 20px 0 #222;
+    z-index: 20;
+}
+
+.dialog-header {
+	background-color: #222;
+	color: #eee;
+	font-size: 1.2rem;
+	height: 40px;
+	width: 100%;
+	z-index: 10;
+	position: relative;
+	top: 0;
+	left:0;
+	margin-top: -28px;
+}
+.dialog-header h4 {
+	padding: 10px 0 0 15px;
+	font-size: 1.3rem;
+	font-weight: 100;
+}
+.dialog-header span {
+	float:right;
+}
+.dialog-header a {
+	font-size: 1.1rem;
+	font-weight: 100;
+	padding-right: 20px;
+	color: #eee;
+	text-decoration: none;
+}
+.dialog-header a:hover {
+	color: #aaa;
+}
+.dialog-content {
+	background-color: #eee;
+	color: #222;
+	font-size: .9rem;
+	padding: 5px 0 0 15px;
+	line-height: 1.3;
+}
+.dialog-content p, .dialog-content ol {
+	font-size: .9rem;
+	font-weight: 100;
+	margin: 20px 20px 20px 0px;
+}
+
+/* - - debug button - - */
+.debug {
+	position: absolute;
+	right: 40px;
+	bottom:10px;
+	max-width: 300px;
+}
+.onoffbtn{
+  width:100px;
+  height:30px;
+  border-radius:15px;
+  background:#222;
+  display:block;
+  position:relative;
+}
+.onoffbtn:after{
+  position:absolute;
+  height:28px;
+  width:58px;
+  display:block;
+  border-radius:15px;
+  background:#F8B8B8;
+  top:1px;
+  left:1px;
+  content:'Log';
+  -webkit-transition: all 200ms ease-in-out;
+  -moz-transition: all 200ms ease-in-out;
+  -o-transition: all 200ms ease-in-out;
+  transition: all 200ms ease-in-out;
+  text-align:center;
+  line-height:29px;
+  color:#000;
+  font-size:12px;
+}
+.onoffbtn.active:after{
+  left:100%;
+  margin-left:-59px;
+  background:#A7DEAE;
+  content:'Log';
+}
+.onoffbtn input[type="checkbox"]{
+  opacity:0;
+}
+.onoffbtn:hover {
+  cursor: pointer;
+}
+/* - - debug table - -  */
+#debug-table {
+	display: none;
+	/* margin-top: 110px; */
+	padding: 10px 0 100px 0;
+	background-color: #000;
+	color: #eee;
+	opacity: .6;
+	top: 85%;
+	position: absolute;
+}
+#debug-table h3 {
+	font-size: 1.5rem;
+	font-weight: 100;
+	padding-left: 15px;
+}
+#debug-table h3 a {
+	color: #FBA394;
+	font-size: .9rem;
+	text-decoration: none;
+}
+#debug-table h3 a:hover {
+	color: #FBA394;
+	text-decoration:underline;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+	margin-left:.4rem;
+	color: #ccc;
+}
+table thead th {
+	font-size: 1rem;
+	text-align: left;
+	font-weight: 100;
+	padding-left: 10px;
+}
+table tbody tr td {
+	line-height: .8rem;
+	font-size: .8rem;
+	font-weight: 100;
+	vertical-align: top;
+	padding: 0.5rem 0.5rem 0.5rem 0.1rem;
+	}
+}
+table .timestamp {
+	color: #9AD5F7;
+	padding-right: 5px;
+}
+/*  - - most frequently occurring color in log - - */
+table .regular {
+	color: #9AD5F7;
+}
+/*  - - infrequent colors in log - - */
+table .highlight1 {
+	color: #eb3cef;
+}
+table .highlight2 {
+	color: #B3F5BC;
+}
+#logdiv, #amazonlog {
+	padding-left: 10px;
+	margin-top: -10px;
+}
+#logdiv a {
+	text-decoration: none;
+	color: #B3F5BC;
+}
+#logdiv a:hover {
+	text-decoration: underline;
+}
+.propellerSpin {
+  animation-name: ckw;
+  animation-duration: 1.3s;
+  animation-timing-function: ease-in-out;
+}
+@keyframes ckw {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(1080deg);
+    }
+}
+
+/*  - - - show/hide minimum screen messaging - -  */
+@media only screen and (max-width: 700px) {
+body, html {
+	background-color: #666;
+}
+.panel {
+	position: relative;
+	background-color: #F2F2F2;
+  top: 0;
+	left: 0;
+	color: #999;
+	width: 320px;
+  height: 520px;
+  box-shadow: none;
+}
+.plt {
+  display: block;
+  border-top: 1px solid #ccc;
+}
+.ccp-footer {
+  display: inline-block;
+}
+img.poly-spin  {
+  margin-left: 10px;
+}
+.headset-name {
+  float: right;
+  padding: 4px 20px 4px 0;
+  font-size: 14px;
+  display: inline-block;
+  position: relative;
+  right: unset;
+  bottom: unset;
+  color: #000;
+}
+.headset-name-zero {
+  display: none;
+  float: right;
+  padding: 4px 20px 4px 0;
+  font-size: 14px;
+  position: relative;
+  right: unset;
+  bottom: unset;
+}
+.coachmark-arrows {
+  display: none;
+}
+#info-dialog {
+	display: none;
+}
+.footer {
+	display: none;
+}
+}
